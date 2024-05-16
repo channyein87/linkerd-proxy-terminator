@@ -1,0 +1,24 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: proxy-terminator-test
+spec:
+  template:
+    metadata:
+      name: proxy-terminator-test
+      annotations:
+        linkerd.io/inject: enabled # inject linkerd-proxy
+    spec:
+      serviceAccountName: proxy-terminator-test
+      containers:
+      - name: pi # job container
+        image: perl:5.34.0
+        command: ["perl", "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+      - name: busybox # job container
+        image: busybox
+        command: ["/bin/sh"]
+        args: ["-c", "sleep 15"]
+      - name: linkerd-proxy-terminator # proxy terminator
+        image: channyein87/linkerd-proxy-terminator:0.0.1
+      restartPolicy: Never
+  backoffLimit: 1

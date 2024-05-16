@@ -33,4 +33,10 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Docker Build and Push
-        run: docker build --push -t channyein87/linkerd-proxy-terminator:${{ env.TAG_VERSION }} .
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            channyein87/linkerd-proxy-terminator:latest
+            channyein87/linkerd-proxy-terminator:${{ env.TAG_VERSION }}

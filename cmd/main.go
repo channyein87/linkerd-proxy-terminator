@@ -53,13 +53,6 @@ func main() {
 		}
 	}
 
-	if !linkerdProxy {
-		fmt.Printf("No %s container found. Going for sleep..\n", linkerdContainer)
-		for {
-			time.Sleep(10 * time.Second)
-		}
-	}
-
 	// create a new variable watchContainers array list and store the list of containers except linkerd-proxy and proxy-terminator
 	var watchContainers []string
 	watchContainers = []string{}
@@ -95,10 +88,14 @@ func main() {
 		}
 	}
 
-	fmt.Println("All watching containers are terminated. Terminating linkerd proxy container...")
-	err = terminateLinkerdProxy()
-	if err != nil {
-		panic(err.Error())
+	if !linkerdProxy {
+		fmt.Printf("No %s container. Goodbye..\n", linkerdContainer)
+	} else {
+		fmt.Println("All watching containers are terminated. Terminating linkerd proxy container...")
+		err = terminateLinkerdProxy()
+		if err != nil {
+			panic(err.Error())
+		}
 	}
 }
 

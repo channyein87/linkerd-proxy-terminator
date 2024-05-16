@@ -22,7 +22,7 @@ jobs:
         run: echo "TAG_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
 
       - name: Build
-        run: GOOS=linux GOARCH=amd64 go build -v -ldflags="${{ env.LDFLAGS }}" -o ./proxy-terminator ./cmd
+        run: go build -v -ldflags="${{ env.LDFLAGS }}" -o ./proxy-terminator ./cmd
         env:
           LDFLAGS: -X 'main.Version=${{ env.TAG_VERSION }}'
 

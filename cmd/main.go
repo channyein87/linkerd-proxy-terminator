@@ -55,7 +55,9 @@ func main() {
 
 	if !linkerdProxy {
 		fmt.Printf("No %s container found. Going for sleep..\n", linkerdContainer)
-		// infinite sleep 10 seconds for loop
+		for {
+			time.Sleep(10 * time.Second)
+		}
 	}
 
 	// create a new variable watchContainers array list and store the list of containers except linkerd-proxy and proxy-terminator

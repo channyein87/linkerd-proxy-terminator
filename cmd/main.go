@@ -17,65 +17,62 @@ import (
 )
 
 func main() {
+
+	namespaceName := getNamespace()
+	podName := getPodName()
+	linkerdContainer := getLinkerdProxyName()
+	proxyTerminator := getProxyTerminatorName()
+
 	// creates the in-cluster config
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		panic(err.Error())
 	}
+
 	// creates the clientset
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		panic(err.Error())
 	}
 
-	// get pod
-	namespaceName := getNamespace()
-	podName := os.Getenv("HOSTNAME")
+	// get pod info
 	podInfo, err := getPodInfo(clientset, podName, namespaceName)
 	if err != nil {
 		panic(err.Error())
+	} else {
+		fmt.Printf("Found %s pod in %s namespace\n", podName, namespaceName)
 	}
 
 	// check if there is container linkerd-proxy in the podInfo containers list.
 	linkerdProxy := false
 	for _, container := range podInfo.Spec.Containers {
-		if container.Name == "linkerd-proxy" {
-			fmt.Printf("Found linkerd-proxy container\n")
+		if container.Name == linkerdContainer {
+			fmt.Printf("Found %s container\n", linkerdContainer)
 			linkerdProxy = true
 			break
 		}
 	}
 
 	if !linkerdProxy {
-		fmt.Printf("No linkerd-proxy container found. Goodbye..\n")
-		return
+		fmt.Printf("No %s container found. Going for sleep..\n", linkerdContainer)
+		// infinite sleep 10 seconds for loop
 	}
 
-	// create a new variable watchContainers array list and store the list of containers except linkerd-proxy and proxy-kill
+	// create a new variable watchContainers array list and store the list of containers except linkerd-proxy and proxy-terminator
 	var watchContainers []string
 	watchContainers = []string{}
 	for _, container := range podInfo.Spec.Containers {
-		if container.Name != "linkerd-proxy" && container.Name != "proxy-kill" {
+		if container.Name != linkerdContainer && container.Name != proxyTerminator {
 			watchContainers = append(watchContainers, container.Name)
 		}
 	}
 	fmt.Printf("Watching containers: %v\n", watchContainers)
 
-	// for _, container := range podInfo.Status.ContainerStatuses {
-	// 	if container.Name == "linkerd-proxy" {
-	// 		// loop until container.Ready is true
-	// 		for !container.Ready {
-	// 			fmt.Printf("Waiting for linkerd-proxy container to be ready\n")
-	// 		}
-	// 		fmt.Printf("linkerd-proxy container is ready\n")
-	// 	}
-	// }
-
+	// watch containers every 5 seconds if ther are completed
 	runningWatchContainers := len(watchContainers)
 	for runningWatchContainers > 0 {
 		fmt.Printf("Running watch containers count: %v\n", runningWatchContainers)
-		time.Sleep(5 * time.Second)
-		// get pod info
+		time.Sleep(10 * time.Second)
 		podInfo, err = getPodInfo(clientset, podName, namespaceName)
 		if err != nil {
 			panic(err.Error())
@@ -96,11 +93,38 @@ func main() {
 		}
 	}
 
-	fmt.Println("All watching containers are terminated. Killing linkerd-proxy...")
-	err = killLinkerProxy()
+	fmt.Println("All watching containers are terminated. Terminating linkerd proxy container...")
+	err = terminateLinkerdProxy()
 	if err != nil {
 		panic(err.Error())
 	}
+}
+
+// getPodName function which get the value from env POD_NAME otherwise get the value from env HOSTNAME
+func getPodName() string {
+	podName := os.Getenv("POD_NAME")
+	if podName == "" {
+		podName = os.Getenv("HOSTNAME")
+	}
+	return podName
+}
+
+// getLinkerdProxyName function which get the value from env LINKERD_PROXY_NAME otherwise set the value to linkerd-proxy
+func getLinkerdProxyName() string {
+	linkerdProxyName := os.Getenv("LINKERD_PROXY_NAME")
+	if linkerdProxyName == "" {
+		linkerdProxyName = "linkerd-proxy"
+	}
+	return linkerdProxyName
+}
+
+// getProxyTerminatorName function which get the value from env PROXY_TERMINATOR_NAME otherwise set the value to linkerd-proxy-terminator
+func getProxyTerminatorName() string {
+	proxyTerminatorName := os.Getenv("PROXY_TERMINATOR_NAME")
+	if proxyTerminatorName == "" {
+		proxyTerminatorName = "linkerd-proxy-terminator"
+	}
+	return proxyTerminatorName
 }
 
 // getNamespace function which reads the file /var/run/secrets/kubernetes.io/serviceaccount and return the namespace name as string
@@ -130,28 +154,26 @@ func getPodInfo(clientset *kubernetes.Clientset, podName string, namespaceName s
 		} else {
 			return nil, err
 		}
-	} else {
-		fmt.Printf("Found %s pod in %s namespace\n", podName, namespaceName)
 	}
 	return pod, err
 }
 
-// killLinkerProxy function by calling POST request to http://localhost:4191/shutdown
-func killLinkerProxy() error {
+// terminateLinkerdProxy function by calling POST request to http://localhost:4191/shutdown
+func terminateLinkerdProxy() error {
 	url := "http://localhost:4191/shutdown"
 
 	client := &http.Client{}
 	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		fmt.Println("Error creating http request:", err)
 		return err
 	}
 	_, err = client.Do(req)
 	if err != nil {
-		fmt.Println("Error sending request:", err)
+		fmt.Println("Error terminating request:", err)
 		return err
 	}
 
-	fmt.Println("Killed linkerd-proxy!")
+	fmt.Println("Terminated linkerd proxy!")
 	return nil
 }

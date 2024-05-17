@@ -35,18 +35,4 @@ Simply run the proxy terminator container as a sidecar along with the job pod.
 
 - [simple-job](examples/simple-job)
 
-Sample outputs.
-
-```text
-Found proxy-terminator-test-btrzz pod in default namespace
-Found linkerd-proxy container
-Watching containers: [pi busybox]
-Running watch containers count: 2
-Container pi has terminated as it is Completed
-Container busybox is still running. Terminated: nil
-Running watch containers count: 1
-Container pi has terminated as it is Completed
-Container busybox has terminated as it is Completed
-All watching containers are terminated. Terminating linkerd proxy container...
-Terminated linkerd proxy!
-```
+![simple-job](docs/simple-job.gif)

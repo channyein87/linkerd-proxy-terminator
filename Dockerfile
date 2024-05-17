@@ -19,7 +19,7 @@ COPY .  .
 
 RUN CGO_ENABLED=${CGO_ENABLED} GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
   go build -ldflags "-s -w -X main.Version=${VERSION}" \
-  -a -o /usr/bin/proxy-terminator .
+  -a -o /usr/bin/proxy-terminator ./cmd
 
 FROM --platform=${BUILDPLATFORM:-linux/amd64} gcr.io/distroless/static:nonroot
 

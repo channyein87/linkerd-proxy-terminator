@@ -12,19 +12,8 @@ jobs:
       - uses: actions/checkout@v3
         name: Checkout
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.22'
-          check-latest: true
-    
       - name: Set ENV
         run: echo "TAG_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
-
-      - name: Build
-        run: go build -v -ldflags="${{ env.LDFLAGS }}" -o ./proxy-terminator ./cmd
-        env:
-          LDFLAGS: -X 'main.Version=${{ env.TAG_VERSION }}'
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -32,11 +21,19 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Docker Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: channyein87/linkerd-proxy-terminator
+
       - name: Docker Build and Push
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: |
-            channyein87/linkerd-proxy-terminator:latest
-            channyein87/linkerd-proxy-terminator:${{ env.TAG_VERSION }}
+          platforms: linux/amd64,linux/arm/v8,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ env.TAG_VERSION }}
